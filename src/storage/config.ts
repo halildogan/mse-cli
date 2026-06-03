@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
-import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import type { MseConfig } from '../types';
 
 const DIR_NAME = '.mse';
@@ -82,4 +82,38 @@ export async function getDefaultRuns(): Promise<number | undefined> {
   const config = await readConfig();
   const runs = config.defaults?.runs;
   return typeof runs === 'number' && Number.isFinite(runs) ? runs : undefined;
+}
+
+/** Persists the default run count. */
+export async function setDefaultRuns(runs: number): Promise<void> {
+  const current = await readConfig();
+  const defaults = { ...current.defaults, runs };
+  await writeConfig({ ...current, version: 1, defaults });
+}
+
+/** Deletes the config file entirely (if it exists). */
+export async function removeConfigFile(): Promise<void> {
+  const path = configPath();
+  if (existsSync(path)) {
+    await rm(path, { force: true });
+  }
+}
+
+/** Clears selected fields, pruning empty sections so the file stays tidy. */
+export async function clearConfigFields(fields: {
+  key?: boolean;
+  model?: boolean;
+  runs?: boolean;
+}): Promise<void> {
+  const current = await readConfig();
+  const openai = { ...current.openai };
+  const defaults = { ...current.defaults };
+  if (fields.key) delete openai.apiKey;
+  if (fields.model) delete openai.model;
+  if (fields.runs) delete defaults.runs;
+
+  const next: MseConfig = { version: 1 };
+  if (Object.keys(openai).length > 0) next.openai = openai;
+  if (Object.keys(defaults).length > 0) next.defaults = defaults;
+  await writeConfig(next);
 }

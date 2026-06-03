@@ -26,6 +26,12 @@ Key Factors:
 
 ---
 
+## Demo
+
+![mse-cli in action — simulating decisions and inspecting stored config](assets/demo.svg)
+
+<sub>Regenerate the recording with `npm run demo` (builds, captures real CLI output into `assets/demo.cast`, and renders `assets/demo.svg`). To record your own session instead, use `scripts/demo.sh` with asciinema.</sub>
+
 ## Why it exists
 
 Most "should I do X?" tools either give you a vibe ("looks good! 🚀") or a single confident number that hides all its assumptions. Real decisions are driven by **multiple uncertain factors** interacting, and the honest output is a **distribution**, not a verdict.
@@ -95,6 +101,13 @@ mse "my situation" --template freelancing
 # AI-assisted factor extraction (optional)
 mse init                       # store your OpenAI key once
 mse "open a coffee shop" --ai openai --explain
+
+# Manage stored configuration
+mse config                     # show key (masked), model, and default runs
+mse config set runs 5000       # use 5000 runs by default from now on
+mse config set model gpt-4o    # change the default model
+mse config clear --key         # remove just the stored API key
+mse config clear               # remove all stored config
 ```
 
 ---
@@ -112,6 +125,7 @@ mse init [options]
 | ------------------ | ------------------------------------------------------------------------ |
 | `mse "<scenario>"` | Run a simulation for the given decision.                                 |
 | `mse init`         | Store your OpenAI API key and default model in `~/.mse/config.json`.     |
+| `mse config`       | Inspect (masked) or clear your stored key, model, and default runs.      |
 
 ### Options (simulation)
 
@@ -122,7 +136,7 @@ mse init [options]
 | `--model <model>`   | OpenAI model override (AI mode only).                             | `gpt-4o-mini`|
 | `--runs <n>`        | Number of Monte Carlo runs.                                       | `1000`       |
 | `--seed <n>`        | Integer seed for a deterministic, reproducible run.               | _(random)_   |
-| `--template <name>` | Force a built-in template (`startup`, `freelancing`, `generic`).  | _(auto)_     |
+| `--template <name>` | Force a built-in template (see list below).                       | _(auto)_     |
 | `--json`            | Output machine-readable JSON.                                     | `false`      |
 | `--explain`         | Include the factor breakdown / reasoning.                         | `false`      |
 | `--no-color`        | Disable colored output.                                           | _(color on)_ |
@@ -174,9 +188,11 @@ The reported **success probability** is the mean outcome across all runs; the **
 ### Factor extraction
 
 1. **Explicit template** — `--template <name>` forces a built-in preset.
-2. **Template match** — the scenario text is matched against built-in templates (`startup`, `freelancing`) by keywords.
+2. **Template match** — the scenario text is matched against built-in templates by keywords.
 3. **Keyword fallback** — otherwise, a balanced generic model is adjusted by lightweight positive/negative sentiment cues in the text.
 4. **AI** (opt-in) — `--ai openai` asks the model to propose factors.
+
+**Built-in templates:** `startup`, `freelancing`, `career-change`, `relocation`, `investment`, `buy-vs-rent`, and the `generic` fallback. Force one with `--template <name>`. These are heuristic starting points — for a tailored analysis, use `--ai openai`.
 
 ---
 

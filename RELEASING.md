@@ -2,6 +2,16 @@
 
 `mse-cli` follows [Semantic Versioning 2.0.0](https://semver.org/): `MAJOR.MINOR.PATCH`.
 
+## Before your first npm publish
+
+A one-time checklist:
+
+1. **Confirm the package name.** `mse-cli` is currently unclaimed on npm (`npm view mse-cli` → 404). If it gets taken, publish under a scope: set `"name": "@your-scope/mse-cli"`. The `publishConfig.access: "public"` field already makes scoped publishes public.
+2. **Fix the metadata.** Replace the placeholder URLs in `package.json` — `repository.url`, `homepage`, `bugs.url` — and `author` with your real GitHub org/repo and name. Update the `@mse-cli/*` team handles in `.github/CODEOWNERS` to real teams/users.
+3. **Verify what ships.** `npm publish --dry-run` lists the tarball — it must contain only `dist/`, `README.md`, `LICENSE`, and `package.json` (enforced by the `files` allowlist).
+4. **Authenticate.** `npm login` (or configure an automation token); confirm with `npm whoami`.
+5. **Publish.** Tag a release and let CI do it (recommended — see below), or publish manually: `npm run verify && npm publish`. Provenance (`--provenance`) only works from CI with OIDC, so the manual path publishes without it.
+
 ## What bumps which number
 
 Because the **deterministic core is sacred**, changes that alter simulation output are treated as more significant than they might be in other tools.

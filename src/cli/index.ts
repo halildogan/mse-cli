@@ -4,14 +4,9 @@ import ora from 'ora';
 import { runSimulation } from '../core/engine';
 import { formatResult } from '../output/formatter';
 import { runInit } from './init';
+import { runConfigClear, runConfigPath, runConfigSet, runConfigShow } from './config';
 import { getStoredApiKey, getStoredModel, getDefaultRuns } from '../storage/config';
-import {
-  DEFAULT_OPENAI_MODEL,
-  DEFAULT_RUNS,
-  MAX_RUNS,
-  MIN_RUNS,
-  VERSION,
-} from '../constants';
+import { DEFAULT_OPENAI_MODEL, DEFAULT_RUNS, MAX_RUNS, MIN_RUNS, VERSION } from '../constants';
 import { listTemplateNames } from '../templates';
 import { ExitCode, MissingApiKeyError, MseError, UsageError, errorMessage } from '../util/errors';
 import { redact } from '../util/redact';
@@ -21,7 +16,7 @@ interface ScenarioCliOptions {
   ai?: string;
   apiKey?: string;
   model?: string;
-  runs: string;
+  runs?: string;
   seed?: string;
   template?: string;
   json: boolean;
@@ -49,6 +44,16 @@ function parseSeed(value: string | undefined): number | null {
   return n;
 }
 
+/** Resolves runs: explicit --runs, else the saved default, else the built-in default. */
+async function resolveRuns(value: string | undefined): Promise<number> {
+  if (value !== undefined) return parseRuns(value);
+  const stored = await getDefaultRuns();
+  if (stored !== undefined && Number.isInteger(stored) && stored >= MIN_RUNS && stored <= MAX_RUNS) {
+    return stored;
+  }
+  return DEFAULT_RUNS;
+}
+
 /** Resolves the API key in priority order: flag -> env -> stored config. */
 async function resolveApiKey(flagValue: string | undefined): Promise<string | undefined> {
   const flag = (flagValue ?? '').trim();
@@ -60,10 +65,12 @@ async function resolveApiKey(flagValue: string | undefined): Promise<string | un
 
 async function runScenario(scenarioArg: string | undefined, opts: ScenarioCliOptions): Promise<void> {
   if (!scenarioArg || scenarioArg.trim() === '') {
-    throw new UsageError('A scenario is required, e.g. mse "start freelancing as a developer". Run `mse --help`.');
+    throw new UsageError(
+      'A scenario is required, e.g. mse "start freelancing as a developer". Run `mse --help`.',
+    );
   }
 
-  const runs = parseRuns(opts.runs);
+  const runs = await resolveRuns(opts.runs);
   const seed = parseSeed(opts.seed);
   const useAi = opts.ai !== undefined;
 
@@ -112,28 +119,7 @@ function buildProgram(): Command {
       'Micro Simulation Engine — model uncertainty in human decisions with Monte Carlo simulation.',
     )
     .version(VERSION, '-v, --version', 'output the version number')
-    .showHelpAfterError('(add --help for usage)');
-
-  program
-    .command('init')
-    .description('Store your OpenAI API key and default model locally (~/.mse/config.json).')
-    .option('--api-key <key>', 'set the API key non-interactively')
-    .option('--model <model>', 'set the default OpenAI model')
-    .action(async (opts: { apiKey?: string; model?: string }) => {
-      await runInit({ apiKey: opts.apiKey, model: opts.model });
-    });
-
-  program
-    .argument('[scenario]', 'the decision scenario to model, e.g. "start freelancing as a developer"')
-    .option('--ai <provider>', 'enable AI-assisted factor extraction (provider: openai)')
-    .option('--api-key <key>', 'OpenAI API key override (AI mode only)')
-    .option('--model <model>', 'OpenAI model override (AI mode only)')
-    .option('--runs <n>', 'number of Monte Carlo runs', String(DEFAULT_RUNS))
-    .option('--seed <n>', 'integer seed for a deterministic, reproducible run')
-    .option('--template <name>', `force a built-in template (${listTemplateNames().join(', ')})`)
-    .option('--json', 'output machine-readable JSON', false)
-    .option('--explain', 'include the factor breakdown / reasoning', false)
-    .option('--no-color', 'disable colored output')
+    .showHelpAfterError('(add --help for usage)')
     .addHelpText(
       'after',
       [
@@ -144,12 +130,71 @@ function buildProgram(): Command {
         '  $ mse "should I switch careers" --json',
         '  $ mse "open a coffee shop" --ai openai --explain',
         '  $ mse init',
+        '  $ mse config            # show stored config (key masked)',
         '',
         'API key resolution (AI mode): --api-key, then OPENAI_API_KEY, then ~/.mse/config.json.',
       ].join('\n'),
-    )
+    );
+
+  // Default command — lets `mse "scenario"` work without typing a subcommand.
+  program
+    .command('run [scenario]', { isDefault: true })
+    .description('Run a simulation for a decision scenario (this is the default command).')
+    .option('--ai <provider>', 'enable AI-assisted factor extraction (provider: openai)')
+    .option('--api-key <key>', 'OpenAI API key override (AI mode only)')
+    .option('--model <model>', 'OpenAI model override (AI mode only)')
+    .option('--runs <n>', `number of Monte Carlo runs (default ${DEFAULT_RUNS}, or your saved default)`)
+    .option('--seed <n>', 'integer seed for a deterministic, reproducible run')
+    .option('--template <name>', `force a built-in template (${listTemplateNames().join(', ')})`)
+    .option('--json', 'output machine-readable JSON', false)
+    .option('--explain', 'include the factor breakdown / reasoning', false)
+    .option('--no-color', 'disable colored output')
     .action(async (scenario: string | undefined, opts: ScenarioCliOptions) => {
       await runScenario(scenario, opts);
+    });
+
+  program
+    .command('init')
+    .description('Store your OpenAI API key and default model locally (~/.mse/config.json).')
+    .option('--api-key <key>', 'set the API key non-interactively')
+    .option('--model <model>', 'set the default OpenAI model')
+    .action(async (opts: { apiKey?: string; model?: string }) => {
+      await runInit({ apiKey: opts.apiKey, model: opts.model });
+    });
+
+  // `mse config` shows the stored config; subcommands set/clear/path manage it.
+  const config = program
+    .command('config')
+    .description('Inspect or clear stored configuration (~/.mse/config.json).')
+    .option('--json', 'output as JSON', false)
+    .option('--no-color', 'disable colored output')
+    .action(async (opts: { json: boolean; color: boolean }) => {
+      await runConfigShow({ json: opts.json === true, color: opts.color !== false });
+    });
+
+  config
+    .command('set <field> <value>')
+    .description('Set a stored value. Fields: model, runs. (Use `mse init` for the API key.)')
+    .action(async (field: string, value: string) => {
+      await runConfigSet(field, value);
+    });
+
+  config
+    .command('clear')
+    .description('Clear stored configuration. With no flags, clears everything.')
+    .option('--key', 'clear only the stored API key')
+    .option('--model', 'clear only the stored model')
+    .option('--runs', 'clear only the stored default runs')
+    .option('--all', 'clear everything (default when no flag is given)')
+    .action(async (opts: { key?: boolean; model?: boolean; runs?: boolean; all?: boolean }) => {
+      await runConfigClear(opts);
+    });
+
+  config
+    .command('path')
+    .description('Print the path to the config file.')
+    .action(() => {
+      runConfigPath();
     });
 
   return program;

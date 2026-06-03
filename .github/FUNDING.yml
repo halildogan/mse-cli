@@ -1,0 +1,21 @@
+# GitHub "Sponsor" button configuration.
+#
+# Uncomment and fill in only the platforms you actually use, then commit.
+# While every entry is commented out, no Sponsor button is shown (which is the
+# safe default — a button that links to a non-existent account is worse than none).
+#
+# Docs: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+
+# GitHub Sponsors — a single username/org, or a list of up to 4:
+github: halildogan
+
+# Other platforms (uncomment the ones you use):
+# patreon: your-username
+# open_collective: your-collective
+# ko_fi: your-username
+# liberapay: your-username
+# buy_me_a_coffee: your-username
+# tidelift: npm/mse-cli
+# polar: your-username
+# thanks_dev: your-username
+# custom: ["https://example.com/donate"]

@@ -1,6 +1,10 @@
 import type { RawFactor } from '../types';
 import { startupTemplate } from './startup';
 import { freelancingTemplate } from './freelancing';
+import { careerChangeTemplate } from './career-change';
+import { relocationTemplate } from './relocation';
+import { investmentTemplate } from './investment';
+import { buyVsRentTemplate } from './buy-vs-rent';
 import { genericTemplate } from './generic';
 
 /** A reusable, domain-specific preset of decision factors. */
@@ -16,7 +20,14 @@ export interface DecisionTemplate {
 }
 
 /** Domain templates considered during matching. Order is the tie-break priority. */
-export const TEMPLATES: readonly DecisionTemplate[] = [startupTemplate, freelancingTemplate];
+export const TEMPLATES: readonly DecisionTemplate[] = [
+  startupTemplate,
+  freelancingTemplate,
+  careerChangeTemplate,
+  relocationTemplate,
+  investmentTemplate,
+  buyVsRentTemplate,
+];
 
 /** Neutral, domain-agnostic fallback used by keyword extraction. */
 export const GENERIC_TEMPLATE: DecisionTemplate = genericTemplate;
@@ -54,4 +65,12 @@ export function listTemplateNames(): string[] {
   return [...TEMPLATES.map((t) => t.name), GENERIC_TEMPLATE.name];
 }
 
-export { startupTemplate, freelancingTemplate, genericTemplate };
+export {
+  startupTemplate,
+  freelancingTemplate,
+  careerChangeTemplate,
+  relocationTemplate,
+  investmentTemplate,
+  buyVsRentTemplate,
+  genericTemplate,
+};
