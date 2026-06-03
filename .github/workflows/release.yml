@@ -1,0 +1,67 @@
+name: Release
+
+# Triggered by pushing a semver tag, e.g. `git tag v0.2.0 && git push --tags`.
+# Builds, runs the full verification gate, publishes to npm (if NPM_TOKEN is
+# configured), and creates a GitHub Release with auto-generated notes.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # create releases / upload assets
+  id-token: write # npm provenance (OIDC)
+
+jobs:
+  release:
+    name: Build, verify, publish
+    runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Core isolation guard
+        run: npm run check:core
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Deterministic seed check
+        run: npm run check:determinism
+
+      - name: Pack tarball
+        run: npm pack
+
+      - name: Publish to npm
+        if: ${{ env.NPM_TOKEN != '' }}
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Skip publish (no token)
+        if: ${{ env.NPM_TOKEN == '' }}
+        run: echo "NPM_TOKEN is not configured — skipping npm publish (GitHub Release only)."
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${{ github.ref_name }}" ./*.tgz --title "${{ github.ref_name }}" --generate-notes

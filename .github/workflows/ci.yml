@@ -1,0 +1,59 @@
+name: CI
+
+# Required status checks for merging into protected branches.
+# Configure branch protection on `main` (and `develop`) to require the
+# "Verify" jobs below so a red build blocks merge.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 20, 22]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The deterministic simulation core must never import the AI layer,
+      # secrets/storage, or the network. This guard fails the build if it does.
+      - name: Core isolation guard
+        run: npm run check:core
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit & integration tests
+        run: npm test
+
+      # Integration-level determinism: the built CLI must produce identical
+      # output for identical (scenario, seed, runs), and differ across seeds.
+      - name: Deterministic seed check
+        run: npm run check:determinism

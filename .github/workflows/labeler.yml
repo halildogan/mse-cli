@@ -1,0 +1,20 @@
+name: Labeler
+
+# Auto-labels pull requests by which files they touch (see .github/labeler.yml),
+# which feeds the area-based triage workflow (core-engine / ai-layer / cli / ...).
+
+on: [pull_request_target]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply area labels
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          sync-labels: true

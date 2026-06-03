@@ -1,0 +1,54 @@
+# Path-based PR auto-labeling for actions/labeler@v5.
+# Areas mirror the architecture: the deterministic core is tracked separately
+# from the optional AI layer so reviewers and triagers can route accordingly.
+
+core-engine:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/core/**'
+          - 'src/templates/**'
+          - 'src/util/rng.ts'
+
+ai-layer:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/ai/**'
+
+cli:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/cli/**'
+          - 'bin/**'
+          - 'src/output/**'
+
+storage:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/storage/**'
+
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/storage/**'
+          - 'src/util/redact.ts'
+          - 'src/ai/**'
+          - 'SECURITY.md'
+          - '.github/workflows/security.yml'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tests/**'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - 'tsup.config.ts'
+          - 'vitest.config.ts'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**'

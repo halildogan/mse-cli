@@ -1,0 +1,37 @@
+# CODEOWNERS — review routing and protection for sensitive areas.
+#
+# Replace the placeholder teams/handles below with real GitHub teams or users.
+# Pair this file with branch protection ("Require review from Code Owners") so
+# the deterministic core and security-sensitive code cannot be merged without
+# the right reviewers.
+#
+# Principle: the simulation engine is deterministic and sacred — it gets the
+# strictest review. The AI layer is reviewed separately by AI maintainers.
+
+# Default owners for everything not matched below.
+*                           @mse-cli/maintainers
+
+# --- PROTECTED: deterministic simulation core ---------------------------------
+# Math, sampling, weighting, parsing, templates, and the seeded RNG. Changes
+# here require core-maintainer review and must preserve determinism.
+/src/core/                  @mse-cli/core-maintainers
+/src/templates/             @mse-cli/core-maintainers
+/src/util/rng.ts            @mse-cli/core-maintainers
+/src/types.ts               @mse-cli/core-maintainers
+/src/constants.ts           @mse-cli/core-maintainers
+
+# --- AI layer (reviewed separately) -------------------------------------------
+/src/ai/                    @mse-cli/ai-maintainers
+
+# --- Security-sensitive areas -------------------------------------------------
+# Secret handling, local config storage, redaction, and the security policy.
+/src/storage/               @mse-cli/security @mse-cli/maintainers
+/src/util/redact.ts         @mse-cli/security @mse-cli/maintainers
+/SECURITY.md                @mse-cli/security
+/.github/workflows/         @mse-cli/security @mse-cli/maintainers
+/scripts/                   @mse-cli/core-maintainers @mse-cli/security
+
+# --- Governance ---------------------------------------------------------------
+/CODEOWNERS                 @mse-cli/maintainers
+/.github/CODEOWNERS         @mse-cli/maintainers
+/CONTRIBUTING.md            @mse-cli/maintainers
