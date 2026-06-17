@@ -58,7 +58,7 @@
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
-    "openai": "^4.67.0",
+    "openai": "^6.43.0",
     "ora": "^8.1.0",
     "zod": "^3.23.8"
   },
